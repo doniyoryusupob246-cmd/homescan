@@ -23,13 +23,15 @@ export default function Home() {
     );
   };
   return (
-    <div className="max-w-107.5 w-full mx-auto px-4 pt-5">
-      <div className="w-50 mx-auto text-center">
-        <h3 className="text-[14px] font-bold leading-3 mb-2">MyPropertyBot</h3>
-        <p className="font-light leading-2 text-[10px]">мини-приложение</p>
+    <div className="max-w-107.5 w-full mx-auto px-4 py-5 bg-black/2">
+      <div className="bg-white py-3 rounded-sm">
+        <div className="w-50 mx-auto text-center">
+          <h3 className="text-[14px] font-bold leading-3 mb-2">MyPropertyBot</h3>
+          <p className="font-light leading-2 text-[10px]">мини-приложение</p>
+        </div>
       </div>
-      <div className="flex flex-col ">
-        <div className="border rounded-full border-black py-1 px-3 w-[200px] text-center mt-10 mx-auto">
+      <div className="flex flex-col bg-white py-5 rounded-sm mt-5 px-5">
+        <div className="border rounded-full border-black py-1 px-3 w-[200px] text-center  mx-auto">
           <p className="text-[16px]">Создать фильтр</p>
         </div>
 
