@@ -1,5 +1,6 @@
 'use client';
 import { RangeSlider } from '@/components/shared/range-slider';
+import { SelectVariants } from '@/components/shared/select-variants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,14 +17,38 @@ import { ChevronDown } from 'lucide-react';
 import React from 'react';
 
 const rooms = ['1', '2', '3', '4', '5+'];
+const plans = [
+  'Смежная',
+  'Раздельная',
+  'Смежно-раздельная',
+  'Пентхаус',
+  'Многоуровневая',
+  'Студия',
+  'Общежитие',
+];
+
+const repair = [
+  'Авторский проект',
+  'Евроремонт',
+  'Средний',
+  'Требует ремонта',
+  'Чернвая',
+  'Предчистовая',
+];
+
+const snoozel = ['Раздельный', 'Совмещённый', '2+'];
+const furniture = ['Да', 'Нет', 'Все'];
 
 export default function Home() {
-  const [isActiveBtn, setIsActiveBtn] = React.useState<string[]>([]);
+  const [isActiveRooms, setIsActiveRooms] = React.useState<string[]>([]);
+  const [openSett, setOpenSett] = React.useState(false);
+
   const toggleRoom = (room: string) => {
-    setIsActiveBtn((prev) =>
+    setIsActiveRooms((prev) =>
       prev.includes(room) ? prev.filter((r) => r !== room) : [...prev, room],
     );
   };
+
   return (
     <div className="max-w-107.5 w-full mx-auto px-4 pt-5">
       <div className="bg-black/2 py-3 rounded-sm">
@@ -81,7 +106,7 @@ export default function Home() {
               <Button
                 onClick={() => toggleRoom(room)}
                 key={room}
-                variant={isActiveBtn.includes(room) ? 'default' : 'outline'}
+                variant={isActiveRooms.includes(room) ? 'default' : 'outline'}
                 className="w-[50px] h-[50px]">
                 {room}
               </Button>
@@ -95,11 +120,38 @@ export default function Home() {
           <Input placeholder="До" className="h-[40px] rounded-full border-2" />
         </div>
       </div>
-      <div className="flex items-center justify-center mb-3 gap-2 w-[230px] mx-auto cursor-pointer">
-        <p className="text-[12px]">Дополнительные параметры</p>
-        <ChevronDown size={13} />
+
+      <div
+        className={`mt-4 px-4 pb-2 overflow-y-scroll overflow-hidden inset-shadow-xs transition-[max-height] duration-500 ease-in-out  ${
+          openSett ? 'max-h-[500px]' : 'max-h-0'
+        }`}>
+        <div className="mt-3">
+          <h3 className="font-medium mb-2">Этаж</h3>
+          <Input placeholder="От" className="h-[40px] mb-3 rounded-full  border-2" />
+          <Input placeholder="До" className="h-[40px] rounded-full border-2" />
+        </div>
+
+        <div className="mt-3">
+          <h3 className="font-medium mb-2">Этажность дома:</h3>
+          <Input placeholder="От" className="h-[40px] mb-3 rounded-full  border-2" />
+          <Input placeholder="До" className="h-[40px] rounded-full border-2" />
+        </div>
+
+        <SelectVariants title="Планировка" items={plans} />
+
+        <SelectVariants title="Ремонт" items={repair} />
+        <SelectVariants title="Санузел" items={repair} />
+        <SelectVariants title="Санузел" items={snoozel} />
+        <SelectVariants title="Санузел" items={furniture} />
       </div>
-      <div>
+
+      <div
+        onClick={() => setOpenSett(!openSett)}
+        className="flex items-center justify-center mb-3 mt-3 gap-2 w-[230px] mx-auto cursor-pointer">
+        <p className="text-[12px]">Дополнительные параметры</p>
+        <ChevronDown className={openSett ? 'rotate-180' : 'rotate-[0]'} size={13} />
+      </div>
+      <div className="pb-4">
         <Button className="w-full h-[40px] rounded-full">Сохранить</Button>
       </div>
     </div>
