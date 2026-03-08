@@ -1,6 +1,7 @@
 'use client';
 import { RangeSlider } from '@/components/shared/range-slider';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
@@ -11,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ChevronDown } from 'lucide-react';
 import React from 'react';
 
 const rooms = ['1', '2', '3', '4', '5+'];
@@ -86,6 +88,19 @@ export default function Home() {
             ))}
           </div>
         </div>
+
+        <div className="mt-3">
+          <h3 className="font-medium mb-2">Площадь (м)</h3>
+          <Input placeholder="От" className="h-[40px] mb-3 rounded-full  border-2" />
+          <Input placeholder="До" className="h-[40px] rounded-full border-2" />
+        </div>
+      </div>
+      <div className="flex items-center justify-center mb-3 gap-2 w-[230px] mx-auto cursor-pointer">
+        <p className="text-[12px]">Дополнительные параметры</p>
+        <ChevronDown size={13} />
+      </div>
+      <div>
+        <Button className="w-full h-[40px] rounded-full">Сохранить</Button>
       </div>
     </div>
   );
