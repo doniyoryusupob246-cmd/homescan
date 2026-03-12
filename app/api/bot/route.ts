@@ -1,116 +1,129 @@
+// app/api/bot/route.js
+import { NextResponse } from 'next/server';
 import TelegramBot from 'node-telegram-bot-api';
-import prisma from '@/lib/client';
+import { PrismaClient } from '@prisma/client';
 
-import dotenv from 'dotenv';
-
-dotenv.config();
-console.log(Object.keys(prisma));
-
+// Инициализация (один раз при старте)
 const token = process.env.BOT_TOKEN || '';
-const bot = new TelegramBot(token, { polling: true });
+const prisma = new PrismaClient();
+const bot = new TelegramBot(token);
 
-console.log('✅ Бот запущен и ожидает сообщений...');
+// Проверяем секретный токен
+function validateSecret(request: any) {
+  const secretToken = request.headers.get('x-telegram-bot-api-secret-token');
+  return secretToken === process.env.TELEGRAM_WEBHOOK_SECRET;
+}
 
-bot.onText(/\/start/, async (msg) => {
-  const chatId = msg.chat.id.toString();
-  const telegramId = msg.from?.id?.toString();
+// POST метод для вебхука
 
-  const firstName = msg.from?.first_name;
-  const lastName = msg.from?.last_name;
-  const username = msg.from?.username;
+export async function POST(request: any) {
+  // Проверка авторизации
+  if (!validateSecret(request)) {
+    console.error('❌ Неавторизованный запрос к вебхуку');
+    return new NextResponse('Unauthorized', { status: 401 });
+  }
 
-  if (!telegramId) return;
   try {
-    await prisma.user.upsert({
-      where: { telegramId },
-      update: { chatId: chatId.toString() },
-      create: {
-        telegramId,
-        chatId,
-        firstName,
-        lastName,
-        username,
-      },
-    });
+    const body = await request.json();
+    console.log('📨 Получено сообщение:', body.message?.text);
 
-    await bot.sendMessage(chatId, 'Привет! Я могу найти квартиру мечты', {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: '🔍 Создать фильтр',
-              web_app: { url: `${process.env.APP_URL || 'http://localhost:3000'}/filter/new` },
-            },
-            {
-              text: '📋 Мои фильтры',
-              web_app: { url: `${process.env.APP_URL || 'http://localhost:3000'}/filters` },
-            },
-          ],
-        ],
-      },
-    });
+    const msg = body.message;
 
-    console.log(`✅ Ответ отправлен пользователю ${telegramId}`);
-  } catch (error) {
-    console.error('❌ Ошибка в /start:', error);
-    await bot.sendMessage(chatId, 'Произошла ошибка. Попробуйте позже.');
-  }
-});
+    // Обработка команды /start
+    if (msg?.text === '/start') {
+      const chatId = msg.chat.id;
+      const telegramId = msg.from?.id?.toString();
 
-bot.on('message', async (msg) => {
-  if (msg.text && msg.text.startsWith('/')) {
-    return;
-  }
+      const firstName = msg.from?.first_name;
+      const lastName = msg.from?.last_name;
+      const username = msg.from?.username;
 
-  if (msg.web_app_data) {
-    try {
-      const data = JSON.parse(msg.web_app_data.data);
-      console.log('📱 Данные из Mini App:', data);
-
-      if (data.action === 'create_filter') {
-        const user = await prisma.user.findUnique({
-          where: { telegramId: msg.from?.id?.toString() },
-        });
-
-        if (!user) {
-          await bot.sendMessage(msg.chat.id, '❌ Пользователь не найден. Напишите /start');
-          return;
-        }
-
-        await prisma.filter.create({
-          data: {
-            userId: user.id,
-            name: data.name || 'Мой фильтр',
-            type: data.type || 'rent',
-            criteria: data.criteria || {},
-            isActive: true,
-          },
-        });
-
-        await bot.sendMessage(msg.chat.id, '✅ Фильтр успешно создан!');
-        console.log(`✅ Фильтр создан для пользователя ${user.telegramId}`);
+      if (!telegramId) {
+        return NextResponse.json({ ok: true });
       }
-    } catch (error) {
-      console.error('❌ Ошибка обработки Web App данных:', error);
-      await bot.sendMessage(msg.chat.id, '❌ Произошла ошибка при создании фильтра');
+
+      // Сохраняем пользователя в БД
+      await prisma.user.upsert({
+        where: { telegramId },
+        update: { chatId: chatId.toString() },
+        create: {
+          telegramId,
+          chatId: chatId.toString(),
+          firstName,
+          lastName,
+          username,
+        },
+      });
+
+      // Отправляем приветствие с кнопками Web App
+      await bot.sendMessage(chatId, 'Привет! Я могу найти квартиру мечты', {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: '🔍 Создать фильтр',
+                web_app: { url: `${process.env.APP_URL}/filter/new` },
+              },
+              {
+                text: '📋 Мои фильтры',
+                web_app: { url: `${process.env.APP_URL}/filters` },
+              },
+            ],
+          ],
+        },
+      });
+
+      console.log(`✅ Ответ отправлен пользователю ${telegramId}`);
     }
+
+    // Обработка данных из Web App
+    if (msg?.web_app_data) {
+      try {
+        const data = JSON.parse(msg.web_app_data.data);
+        console.log('📱 Данные из Mini App:', data);
+
+        if (data.action === 'create_filter') {
+          const user = await prisma.user.findUnique({
+            where: { telegramId: msg.from?.id?.toString() },
+          });
+
+          if (!user) {
+            await bot.sendMessage(msg.chat.id, '❌ Пользователь не найден. Напишите /start');
+            return NextResponse.json({ ok: true });
+          }
+
+          await prisma.filter.create({
+            data: {
+              userId: user.id,
+              name: data.name || 'Мой фильтр',
+              type: data.type || 'rent',
+              criteria: data.criteria || {},
+              isActive: true,
+            },
+          });
+
+          await bot.sendMessage(msg.chat.id, '✅ Фильтр успешно создан!');
+          console.log(`✅ Фильтр создан для пользователя ${user.telegramId}`);
+        }
+      } catch (error) {
+        console.error('❌ Ошибка обработки Web App данных:', error);
+        await bot.sendMessage(msg.chat.id, '❌ Ошибка при создании фильтра');
+      }
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('❌ Ошибка в вебхуке:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-});
+}
 
-bot.on('polling_error', (error) => {
-  console.error('⚠️ Polling error:', error);
-});
-
-process.on('SIGINT', async () => {
-  await prisma.$disconnect();
-  console.log('👋 Бот остановлен');
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  await prisma.$disconnect();
-  console.log('👋 Бот остановлен');
-  process.exit(0);
-});
-
-export default bot;
+// GET метод для проверки статуса
+export async function GET() {
+  return NextResponse.json({
+    status: 'ok',
+    message: 'Bot webhook endpoint is working',
+    webhook_set: true,
+    timestamp: new Date().toISOString(),
+  });
+}
